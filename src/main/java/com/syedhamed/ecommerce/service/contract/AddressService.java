@@ -4,6 +4,7 @@ import com.syedhamed.ecommerce.enums.AddressType;
 import com.syedhamed.ecommerce.model.Address;
 
 import java.util.List;
+import java.util.Map;
 
 public interface AddressService {
 
@@ -26,4 +27,5 @@ public interface AddressService {
     Address markAddressAsDefaultByAdmin(Long addressId);
 
     Address updateAddressByAdmin(Long addressId, Address updatedAddressRequest);
+
 }

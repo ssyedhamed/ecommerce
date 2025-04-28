@@ -3,7 +3,9 @@ package com.syedhamed.ecommerce.controllers;
 import com.syedhamed.ecommerce.enums.AddressType;
 import com.syedhamed.ecommerce.model.Address;
 import com.syedhamed.ecommerce.payload.APIResponse;
+import com.syedhamed.ecommerce.payload.external.ValidateAddressRequest;
 import com.syedhamed.ecommerce.service.contract.AddressService;
+import com.syedhamed.ecommerce.service.contract.ExternalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,12 +15,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/addresses")
 public class AddressController {
     private final AddressService addressService;
+    private final ExternalService externalService;
     private boolean isAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication.getAuthorities().stream()
@@ -111,6 +115,13 @@ public class AddressController {
         }
         List<Address> allAddresses = addressService.getAllAddresses();
         return ResponseEntity.ok(new APIResponse<>(allAddresses, "All addresses retrieved", true));
+    }
+
+    @PostMapping("/validate")
+    public ResponseEntity<APIResponse<Map<String, Object>>> validateAddress(@RequestBody ValidateAddressRequest validateAddressRequest){
+        APIResponse<Map<String, Object>> externalServiceResponse = externalService.validateAddress(validateAddressRequest.getPincode());
+        return new ResponseEntity<>(
+                externalServiceResponse,HttpStatus.OK);
     }
 
 
