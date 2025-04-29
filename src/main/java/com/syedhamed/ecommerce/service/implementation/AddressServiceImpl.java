@@ -8,6 +8,7 @@ import com.syedhamed.ecommerce.model.User;
 import com.syedhamed.ecommerce.repository.AddressRepository;
 import com.syedhamed.ecommerce.repository.UserRepository;
 import com.syedhamed.ecommerce.service.contract.AddressService;
+import com.syedhamed.ecommerce.service.contract.ExternalService;
 import com.syedhamed.ecommerce.util.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -26,7 +28,7 @@ public class AddressServiceImpl implements AddressService {
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
     private final ModelMapper modelMapper;
-
+    private final ExternalService externalService;
     @Override
     public Address addAddress(Address addressRequest) {
         log.info("Is Default: [{}]", addressRequest.isDefaultAddress());
@@ -174,4 +176,5 @@ public class AddressServiceImpl implements AddressService {
 
         return addressRepository.save(existingAddress);
     }
+
 }
