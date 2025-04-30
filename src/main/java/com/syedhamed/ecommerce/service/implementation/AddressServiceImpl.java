@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -29,12 +28,15 @@ public class AddressServiceImpl implements AddressService {
     private final AddressRepository addressRepository;
     private final ModelMapper modelMapper;
     private final ExternalService externalService;
+
     @Override
     public Address addAddress(Address addressRequest) {
+        String pincode = addressRequest.getPincode();
+        if (!externalService.isValidAddress(pincode)) {
+            throw new APIException("Enter a valid pincode");
+        }
         log.info("Is Default: [{}]", addressRequest.isDefaultAddress());
-        User userContext = authUtil.getAuthenticatedUserFromCurrentContext();
-        User user = userRepository.findById(userContext.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "Id ", userContext.getId()));
+        User user = authUtil.getLoggedInUser();
         Address address = new Address();
         modelMapper.map(addressRequest, address);
         address.setUser(user);
@@ -47,6 +49,7 @@ public class AddressServiceImpl implements AddressService {
         User user = authUtil.getAuthenticatedUserFromCurrentContext();
         return addressRepository.findByUser_Id(user.getId());
     }
+
     @Override
     public Address getAddressByIdForCurrentUser(Long addressId) {
         User currentUser = authUtil.getAuthenticatedUserFromCurrentContext();
@@ -70,6 +73,7 @@ public class AddressServiceImpl implements AddressService {
 
         return addressRepository.save(existingAddress);
     }
+
     @Override
     public void deleteAddressForCurrentUser(Long addressId) {
         User currentUser = authUtil.getAuthenticatedUserFromCurrentContext();
@@ -81,6 +85,7 @@ public class AddressServiceImpl implements AddressService {
         }
         addressRepository.delete(address);
     }
+
     @Override
     public Address markAddressAsDefaultByUser(Long addressId) {
         User currentUser = authUtil.getAuthenticatedUserFromCurrentContext();
