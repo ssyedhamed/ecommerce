@@ -17,7 +17,7 @@ public class Address {
     private String street;
     private String city;
     private String state;
-    private String postalCode;
+    private String pincode;
     private String country;
     @ToString.Exclude
     @Enumerated(EnumType.STRING)
