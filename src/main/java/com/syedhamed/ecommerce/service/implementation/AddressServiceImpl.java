@@ -14,10 +14,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -67,7 +69,11 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     public Address updateAddressForCurrentUser(Long addressId, Address updatedRequest) {
-        User currentUser = authUtil.getAuthenticatedUserFromCurrentContext();
+        Long userId = authUtil.getLoggedInUserId();
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(()-> new UsernameNotFoundException("Unauthenticated"));
+        // triggers loading within transaction to avoid LazyInitializationException
+        currentUser.getAddresses().size();
         if (updatedRequest.isDefaultAddress()) {
             currentUser.getAddresses()
                     .forEach(address -> address.setDefaultAddress(false));
@@ -185,6 +191,10 @@ public class AddressServiceImpl implements AddressService {
         Address existingAddress = addressRepository.findById(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address", "id", addressId));
         updatedAddressRequest.setId(existingAddress.getId());
+        updatedAddressRequest.setUser(existingAddress.getUser());
+        if(updatedAddressRequest.isDefaultAddress()){
+            existingAddress.getUser().getAddresses().forEach(address -> address.setDefaultAddress(false));
+        }
         // Update only the allowed fields
         modelMapper.map(updatedAddressRequest, existingAddress);
         log.info("Saving updated address: [{}]", existingAddress);
