@@ -63,40 +63,39 @@ INSERT INTO products (product_name, description, quantity, price, discount, spec
 ('Action Figure Hero', 'Collectible superhero action figure', 100, 20.00, 3.00, 19.40, 'default.png', 5);
 
 
-INSERT INTO users (
-    id, email, password, first_name, last_name, phone, profile_image,
+INSERT INTO users (email, password, first_name, last_name, phone, profile_image,
     account_non_locked, enabled, email_verified,
     deleted, deleted_at, created_at, updated_at,
     deactivated, deactivated_at, seller_application_status
 ) VALUES
-(1, 'user1@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Alice', 'Wonder', '1234567890', 'user.png',
+('user1@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Alice', 'Wonder', '1234567890', 'user.png',
 true, true, true, false, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, false, NULL, 'NOT_REQUESTED'),
 
-(2, 'user2@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Bob', 'Builder', '1234567891', 'user.png',
+( 'user2@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Bob', 'Builder', '1234567891', 'user.png',
 true, true, true, true, DATEADD('DAY', -5, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, false, NULL, 'NOT_REQUESTED'),
 
-(3, 'user3@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Charlie', 'Brown', '1234567892', 'user.png',
+('user3@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Charlie', 'Brown', '1234567892', 'user.png',
 true, false, true, false, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, true, DATEADD('DAY', -10, CURRENT_TIMESTAMP), 'NOT_REQUESTED'),
 
-(4, 'user4@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Daisy', 'Duck', '1234567893', 'user.png',
+( 'user4@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Daisy', 'Duck', '1234567893', 'user.png',
 false, true, true, false, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, false, NULL, 'NOT_REQUESTED'),
 
-(5, 'user5@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Evan', 'Peters', '1234567894', 'user.png',
+( 'user5@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Evan', 'Peters', '1234567894', 'user.png',
 true, true, true, true, DATEADD('DAY', -1, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, false, NULL, 'NOT_REQUESTED'),
 
-(6, 'user6@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Fiona', 'Shrek', '1234567895', 'user.png',
+( 'user6@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Fiona', 'Shrek', '1234567895', 'user.png',
 true, false, true, true, DATEADD('DAY', -3, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, true, DATEADD('DAY', -2, CURRENT_TIMESTAMP), 'NOT_REQUESTED'),
 
-(7, 'user7@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'George', 'Clooney', '1234567896', 'user.png',
+( 'user7@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'George', 'Clooney', '1234567896', 'user.png',
 true, true, true, false, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, false, NULL, 'NOT_REQUESTED'),
 
-(8, 'deleted8@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Hannah', 'Montana', '1234567897', 'user.png',
+( 'deleted8@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Hannah', 'Montana', '1234567897', 'user.png',
 false, false, true, true, DATEADD('DAY', -7, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, false, NULL, 'NOT_REQUESTED'),
 
-(9, 'user9@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Ivy', 'League', '1234567898', 'user.png',
+( 'user9@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Ivy', 'League', '1234567898', 'user.png',
 true, false, true, false, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, true, DATEADD('DAY', -15, CURRENT_TIMESTAMP), 'NOT_REQUESTED'),
 
-(10, 'user10@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Jack', 'Sparrow', '1234567899', 'user.png',
+( 'user10@example.com', '$2a$12$Qh.YDgSLUP5xT6i1ClpslOWiTySBDg6Fh3fMSi.py1OcoLDka4RHq', 'Jack', 'Sparrow', '1234567899', 'user.png',
 true, true, true, false, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, false, NULL, 'NOT_REQUESTED');
 
 -- Permissions
