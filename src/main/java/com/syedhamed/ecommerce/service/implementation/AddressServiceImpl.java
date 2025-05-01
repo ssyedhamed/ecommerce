@@ -37,6 +37,13 @@ public class AddressServiceImpl implements AddressService {
         }
         log.info("Is Default: [{}]", addressRequest.isDefaultAddress());
         User user = authUtil.getLoggedInUser();
+        if (addressRequest.isDefaultAddress()) {
+            user.getAddresses().forEach(address -> {
+                if (address.isDefaultAddress()){
+                    address.setDefaultAddress(false);
+                }
+            });
+        }
         Address address = new Address();
         modelMapper.map(addressRequest, address);
         address.setUser(user);
