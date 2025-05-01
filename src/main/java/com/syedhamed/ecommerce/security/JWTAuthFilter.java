@@ -16,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -107,7 +108,14 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                 response.getWriter().write("Invalid token");
                 return;
 
-            } catch (Exception ex) {
+            } catch (UsernameNotFoundException ex){
+                log.error("User email in Token mismatch", ex.getMessage());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("User email in Token mismatch");
+                return;
+            }
+
+            catch (Exception ex) {
                 log.error("Unexpected error during JWT processing", ex);
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                 response.getWriter().write("Unexpected error while processing token");
