@@ -175,11 +175,13 @@ public class AddressServiceImpl implements AddressService {
     public Address updateAddressByAdmin(Long addressId, Address updatedAddressRequest) {
         Address existingAddress = addressRepository.findById(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address", "id", addressId));
-
+        updatedAddressRequest.setId(existingAddress.getId());
         // Update only the allowed fields
         modelMapper.map(updatedAddressRequest, existingAddress);
-
-        return addressRepository.save(existingAddress);
+        log.info("Saving updated address: [{}]", existingAddress);
+        Address address = addressRepository.save(existingAddress);
+        log.info("updated address: [{}]", address);
+        return address;
     }
 
 }
