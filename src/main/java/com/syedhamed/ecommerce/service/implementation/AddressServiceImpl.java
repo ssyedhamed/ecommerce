@@ -125,13 +125,15 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     public Address getDefaultAddressFromCurrentUser() {
-        User currentUser = authUtil.getAuthenticatedUserFromCurrentContext();
+        Long userId = authUtil.getLoggedInUserId();
+        User user = userRepository.findByIdWithAddresses(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         // Fetch the default address
-        return currentUser.getAddresses().stream()
+        return user.getAddresses().stream()
                 .filter(Address::isDefaultAddress)
                 .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Address", "default", "not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Address", "flag ", "default" ));
     }
 
     @Override
