@@ -99,7 +99,7 @@ public class AddressController {
         return ResponseEntity.ok(new APIResponse<>(defaultAddress, "Default address found", true));
     }
 
-    @GetMapping("/user/{userId}")
+    @GetMapping("/users/{userId}")
     public ResponseEntity<APIResponse<List<Address>>> getAllAddressesForUser(@PathVariable Long userId) {
         List<Address> addressesByUserId = addressService.getAddressesByUserId(userId);
         return ResponseEntity.ok(new APIResponse<>(addressesByUserId, "Addresses found", true));
