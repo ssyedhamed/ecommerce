@@ -40,9 +40,9 @@ public class JWTAuthFilter extends OncePerRequestFilter {
 
         log.info("jwt filter started...");
         String path = request.getRequestURI();
-        log.info("Requested URI: " + path);
+        log.info("Requested URI: [{}}", path);
 
-        if (path.equals("/api/auth/login")) {
+        if (path.equals("/api/auth/login") || path.equals("/api/users/register")) {
             log.info("Login request won't be authenticated. Hence, passing the HttpServletRequest to subsequent filters");
             filterChain.doFilter(request, response);
             return;
@@ -98,19 +98,19 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                 return;
 
             } catch (SignatureException ex) {
-                log.error("Invalid token signature", ex.getMessage());
+                log.error("Invalid token signature {}", ex.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("Invalid token signature");
                 return;
 
             } catch (JwtException ex) {
-                log.error("Malformed or invalid token", ex.getMessage());
+                log.error("Malformed or invalid token {}", ex.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("Invalid token");
                 return;
 
             } catch (UsernameNotFoundException ex){
-                log.error("User email in Token mismatch", ex.getMessage());
+                log.error("User email in Token mismatch{}", ex.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("User email in Token mismatch");
                 return;
