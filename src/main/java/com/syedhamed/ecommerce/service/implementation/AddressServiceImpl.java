@@ -17,6 +17,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -39,16 +41,23 @@ public class AddressServiceImpl implements AddressService {
         }
         log.info("Is Default: [{}]", addressRequest.isDefaultAddress());
         User user = authUtil.getLoggedInUser();
+        if(user.getAddresses().size() == 0){
+            // if this the only address going to be added, make it default
+            addressRequest.setDefaultAddress(true);
+        }
         if (addressRequest.isDefaultAddress()) {
+//            flag all other addresses as non-default
             user.getAddresses().forEach(address -> {
                 if (address.isDefaultAddress()){
                     address.setDefaultAddress(false);
                 }
             });
         }
+
         Address address = new Address();
         modelMapper.map(addressRequest, address);
         address.setUser(user);
+        address.setCreatedAt(LocalDateTime.now());
         return addressRepository.save(address);
     }
 
@@ -80,7 +89,8 @@ public class AddressServiceImpl implements AddressService {
         }
         Address existingAddress = addressRepository.findByIdAndUser_Id(addressId, currentUser.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Address", "id", addressId));
-
+        updatedRequest.setId(existingAddress.getId());
+        updatedRequest.setUser(existingAddress.getUser());
         // Update only the allowed fields
         modelMapper.map(updatedRequest, existingAddress);
 
@@ -89,14 +99,49 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     public void deleteAddressForCurrentUser(Long addressId) {
-        User currentUser = authUtil.getAuthenticatedUserFromCurrentContext();
+        Long userId = authUtil.getLoggedInUserId();
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(()-> new UsernameNotFoundException("Unauthenticated"));
+        // triggers loading within transaction to avoid LazyInitializationException
+        currentUser.getAddresses().size();
 
         Address address = addressRepository.findByIdAndUser_Id(addressId, currentUser.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Address", "id", addressId));
-        if (address.isDefaultAddress() && currentUser.getAddresses().size() > 1) {
-            throw new APIException("You must assign another address as default before deleting this one.");
-        }
         addressRepository.delete(address);
+        currentUser.getAddresses().remove(address);
+        log.info("Checking if deleted address is default/not");
+        if (address.isDefaultAddress() && !currentUser.getAddresses().isEmpty()) {
+            log.info("The deleted address is default. Handling default address flagging from the collection....");
+            handleDefaultAddressDeletion(currentUser);
+        }
+    }
+
+    private void handleDefaultAddressDeletion(User currentUser){
+        List<Address> addresses = currentUser.getAddresses();
+        int maxUsage = -1;
+        Address newDefaultAddress = null;
+//        First try to find one with highest usage count
+        for(Address address: addresses){
+            if (address.getUsageCount() > maxUsage) {
+                maxUsage = address.getUsageCount();
+                newDefaultAddress = address;
+            }
+        }
+        log.info("Max usage [{}]", maxUsage);
+//        If all usage counts are 0, pick the most recently added one
+        if(maxUsage == 0){
+            log.info("No usage of any address. Getting the latest address...");
+            newDefaultAddress = addresses.get(0);
+            for(Address address : addresses){
+                if(address.getCreatedAt().isAfter(newDefaultAddress.getCreatedAt())){
+                    newDefaultAddress = address;
+                }
+            }
+        }
+
+        newDefaultAddress.setDefaultAddress(true);
+        log.info("latest address created : [{}]", newDefaultAddress);
+        addressRepository.save(newDefaultAddress);
     }
 
     @Override
@@ -192,6 +237,7 @@ public class AddressServiceImpl implements AddressService {
                 .orElseThrow(() -> new ResourceNotFoundException("Address", "id", addressId));
         updatedAddressRequest.setId(existingAddress.getId());
         updatedAddressRequest.setUser(existingAddress.getUser());
+        updatedAddressRequest.setCreatedAt(existingAddress.getCreatedAt());
         if(updatedAddressRequest.isDefaultAddress()){
             existingAddress.getUser().getAddresses().forEach(address -> address.setDefaultAddress(false));
         }
