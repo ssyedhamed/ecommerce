@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,7 +33,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     private final JWTService jwtService;
 
     private final UserDetailsService userDetailsService;
-
+    private final JWTAuthenticationEntryPoint authenticationEntryPoint;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
@@ -114,7 +115,16 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                 response.getWriter().write("User email in Token mismatch");
                 return;
             }
+            catch (BadCredentialsException ex) {
+                // Log as needed (or not at all)
+                logger.warn("Invalid JWT token: " + ex.getMessage());
 
+
+                // Send custom response
+                authenticationEntryPoint.commence(request, response, ex);
+
+                return; // 🚫 Important: Stop filter chain here
+            }
             catch (Exception ex) {
                 log.error("Unexpected error during JWT processing", ex);
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);

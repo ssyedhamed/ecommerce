@@ -6,6 +6,7 @@ import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -121,4 +122,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(apiResponse,HttpStatus.BAD_REQUEST);
     }
 
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<APIResponse> badCredentialsException(BadCredentialsException e){
+        String message = e.getMessage();
+        apiResponse.setMessage(message);
+        apiResponse.setStatus(false);
+        return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
+    }
 }
