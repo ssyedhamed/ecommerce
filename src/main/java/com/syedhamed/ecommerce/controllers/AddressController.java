@@ -64,11 +64,9 @@ public class AddressController {
 
     @DeleteMapping("/{addressId}")
     public ResponseEntity<APIResponse<String>> deleteAddress(@PathVariable Long addressId) {
-        if (isAdmin()) {
-            addressService.deleteAddressById(addressId);
-        } else {
+
             addressService.deleteAddressForCurrentUser(addressId);
-        }
+
         return ResponseEntity.ok(new APIResponse<>("Address deleted successfully", true));
     }
 

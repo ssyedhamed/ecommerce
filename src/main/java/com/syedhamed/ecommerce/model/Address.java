@@ -6,6 +6,9 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.ToString;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 
 @Entity
 @Data
@@ -23,6 +26,9 @@ public class Address {
     @Enumerated(EnumType.STRING)
     private AddressType addressType;
     private boolean defaultAddress;
+
+    private LocalDateTime createdAt;
+    private int usageCount;
 
 //    @JsonIgnore
     @JsonBackReference
