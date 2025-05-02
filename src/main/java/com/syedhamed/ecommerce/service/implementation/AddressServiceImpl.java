@@ -14,10 +14,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -37,6 +39,13 @@ public class AddressServiceImpl implements AddressService {
         }
         log.info("Is Default: [{}]", addressRequest.isDefaultAddress());
         User user = authUtil.getLoggedInUser();
+        if (addressRequest.isDefaultAddress()) {
+            user.getAddresses().forEach(address -> {
+                if (address.isDefaultAddress()){
+                    address.setDefaultAddress(false);
+                }
+            });
+        }
         Address address = new Address();
         modelMapper.map(addressRequest, address);
         address.setUser(user);
@@ -60,7 +69,11 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     public Address updateAddressForCurrentUser(Long addressId, Address updatedRequest) {
-        User currentUser = authUtil.getAuthenticatedUserFromCurrentContext();
+        Long userId = authUtil.getLoggedInUserId();
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(()-> new UsernameNotFoundException("Unauthenticated"));
+        // triggers loading within transaction to avoid LazyInitializationException
+        currentUser.getAddresses().size();
         if (updatedRequest.isDefaultAddress()) {
             currentUser.getAddresses()
                     .forEach(address -> address.setDefaultAddress(false));
@@ -118,13 +131,15 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     public Address getDefaultAddressFromCurrentUser() {
-        User currentUser = authUtil.getAuthenticatedUserFromCurrentContext();
+        Long userId = authUtil.getLoggedInUserId();
+        User user = userRepository.findByIdWithAddresses(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         // Fetch the default address
-        return currentUser.getAddresses().stream()
+        return user.getAddresses().stream()
                 .filter(Address::isDefaultAddress)
                 .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Address", "default", "not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Address", "flag ", "default" ));
     }
 
     @Override
@@ -175,11 +190,17 @@ public class AddressServiceImpl implements AddressService {
     public Address updateAddressByAdmin(Long addressId, Address updatedAddressRequest) {
         Address existingAddress = addressRepository.findById(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address", "id", addressId));
-
+        updatedAddressRequest.setId(existingAddress.getId());
+        updatedAddressRequest.setUser(existingAddress.getUser());
+        if(updatedAddressRequest.isDefaultAddress()){
+            existingAddress.getUser().getAddresses().forEach(address -> address.setDefaultAddress(false));
+        }
         // Update only the allowed fields
         modelMapper.map(updatedAddressRequest, existingAddress);
-
-        return addressRepository.save(existingAddress);
+        log.info("Saving updated address: [{}]", existingAddress);
+        Address address = addressRepository.save(existingAddress);
+        log.info("updated address: [{}]", address);
+        return address;
     }
 
 }

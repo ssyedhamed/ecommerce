@@ -11,11 +11,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -31,16 +33,16 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     private final JWTService jwtService;
 
     private final UserDetailsService userDetailsService;
-
+    private final JWTAuthenticationEntryPoint authenticationEntryPoint;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         log.info("jwt filter started...");
         String path = request.getRequestURI();
-        log.info("Requested URI: " + path);
+        log.info("Requested URI: [{}}", path);
 
-        if (path.equals("/api/auth/login")) {
+        if (path.equals("/api/auth/login") || path.equals("/api/users/register")) {
             log.info("Login request won't be authenticated. Hence, passing the HttpServletRequest to subsequent filters");
             filterChain.doFilter(request, response);
             return;
@@ -96,18 +98,34 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                 return;
 
             } catch (SignatureException ex) {
-                log.error("Invalid token signature", ex.getMessage());
+                log.error("Invalid token signature {}", ex.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("Invalid token signature");
                 return;
 
             } catch (JwtException ex) {
-                log.error("Malformed or invalid token", ex.getMessage());
+                log.error("Malformed or invalid token {}", ex.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("Invalid token");
                 return;
 
-            } catch (Exception ex) {
+            } catch (UsernameNotFoundException ex){
+                log.error("User email in Token mismatch{}", ex.getMessage());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("User email in Token mismatch");
+                return;
+            }
+            catch (BadCredentialsException ex) {
+                // Log as needed (or not at all)
+                logger.warn("Invalid JWT token: " + ex.getMessage());
+
+
+                // Send custom response
+                authenticationEntryPoint.commence(request, response, ex);
+
+                return; // 🚫 Important: Stop filter chain here
+            }
+            catch (Exception ex) {
                 log.error("Unexpected error during JWT processing", ex);
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                 response.getWriter().write("Unexpected error while processing token");
