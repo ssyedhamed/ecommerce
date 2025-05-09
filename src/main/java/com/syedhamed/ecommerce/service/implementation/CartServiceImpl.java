@@ -100,13 +100,6 @@ public class CartServiceImpl implements CartService {
         log.info("▶ Attempting to add product [{}] with quantity [{}] to cart", productId, requestedQuantity);
 
         Product product = getProduct(productId);
-
-        User user = authUtil.getAuthenticatedUserFromCurrentContext();
-        log.info("✅ Authenticated user [{}] retrieved from security context", user.getEmail());
-
-        Cart cart = getOrCreateCart(user);
-        log.info("🛒 Using cart with ID [{}] for user [{}]", cart.getId(), user.getEmail());
-
         if (product.getQuantity() == 0) {
             log.warn("⚠ Product [{}] is out of stock", product.getProductName());
             throw new APIException(product.getProductName() + " is not available");
@@ -114,6 +107,13 @@ public class CartServiceImpl implements CartService {
         if (requestedQuantity > product.getQuantity()) {
             log.debug("🔍 Requested [{}] > Total Stock [{}]", requestedQuantity, product.getQuantity());
         }
+
+        User user = authUtil.getAuthenticatedUserFromCurrentContext();
+        log.info("✅ Authenticated user [{}] retrieved from security context", user.getEmail());
+
+        Cart cart = getOrCreateCart(user);
+        log.info("🛒 Using cart with ID [{}] for user [{}]", cart.getId(), user.getEmail());
+
         CartItem cartItem = getOrCreateCartItem(product, cart);
         log.info("📌 CartItem fetched or created — ID [{}], quantity [{}]", cartItem.getId(), cartItem.getQuantity());
 
@@ -142,11 +142,22 @@ public class CartServiceImpl implements CartService {
 // Even though the item is saved to the DB, cart.getCartItems() may not reflect it yet,
 // because the Cart entity in memory doesn't auto-refresh its list of items.
 // This ensures the new CartItem is included in the total price calculation.
-        cart.getCartItems().add(cartItem);
-        double totalCartPrice = getTotalPriceOfAllCartItemsInTheCart(cart);
+        Optional<CartItem> existingItem = cart.getCartItems()
+                .stream()
+                .filter(ci -> ci.getProduct().getId().equals(product.getId()))
+                .findFirst();
+
+        if (existingItem.isPresent()) {
+            existingItem.get().setQuantity(totalRequested); // just update
+        } else {
+            cart.getCartItems().add(cartItem); // only add if it didn't exist
+        }
+
+        log.info("cart size before total price calculation: [{}]", cart.getCartItems().size());
+        BigDecimal totalCartPrice = getTotalPriceOfAllCartItemsInTheCart(cart);
         log.info("💰 Updated cart total price: [{}]", totalCartPrice);
         cart.setTotalSpecialPrice(totalCartPrice);
-        double totalDiscountedPrice = getTotalDiscountedPrice(cart, totalCartPrice);
+        BigDecimal totalDiscountedPrice = getTotalDiscountedPrice(cart, totalCartPrice);
         cart.setTotalSavedPrice(totalDiscountedPrice);
         cartRepository.save(cart);
         Cart savedCart = cartRepository.findById(cart.getId())
@@ -185,21 +196,21 @@ public class CartServiceImpl implements CartService {
         return modelMapper.map(cartItem, CartItemDTO.class);
     }
 
-    private double getTotalDiscountedPrice(Cart cart, double totalCartPrice) {
-        Double totalActualPrice = (double) 0;
+    private BigDecimal getTotalDiscountedPrice(Cart cart, BigDecimal totalCartPrice) {
+        BigDecimal totalActualPrice = BigDecimal.valueOf(0);
         for (CartItem item : cart.getCartItems()) {
             log.info("Total Actual Price in loop: [{}]", totalActualPrice); //0,200
-            Double totalActualPriceAsPerQuantityOfCurrentItem = item.getQuantity() * item.getProduct().getPrice();
+            BigDecimal totalActualPriceAsPerQuantityOfCurrentItem =  item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
             log.info("totalActualPriceAsPerQuantityOfCurrentItem in loop: [{}]", totalActualPriceAsPerQuantityOfCurrentItem);
             //10*20 = 200
             // 2 * 600 = 1200
-            totalActualPrice = totalActualPrice + totalActualPriceAsPerQuantityOfCurrentItem;
+            totalActualPrice = totalActualPrice.add(totalActualPriceAsPerQuantityOfCurrentItem);
             log.info("totalActualPrice after calculation in current iteration in loop: [{}]", totalActualPrice);
             //0 + 200 = 200
             // 200 + 1200 = 1400
         }
         log.info("Total Actual price as per quantity of all products is [{}]", totalActualPrice);
-        return totalActualPrice - totalCartPrice;
+        return totalActualPrice.subtract(totalCartPrice);
     }
 
     private Product getProduct(Long productId) {
@@ -288,7 +299,6 @@ public class CartServiceImpl implements CartService {
         User user = authUtil.getAuthenticatedUserFromCurrentContext();
         Cart cart = cartRepository.findByUser_Id(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", "email", user.getEmail()));
-
         return modelMapper.map(cart, CartDTO.class);
     }
 
@@ -317,13 +327,24 @@ public class CartServiceImpl implements CartService {
      * @param cart the user's cart
      * @return total price of all items
      */
-    private static double getTotalPriceOfAllCartItemsInTheCart(Cart cart) {
+    private static BigDecimal getTotalPriceOfAllCartItemsInTheCart(Cart cart) {
         if (cart.getCartItems() == null) {
-            return 0;
+            return BigDecimal.valueOf(0);
         }
-        double total = cart.getCartItems().stream()
+        log.info("cart size : [{}]", cart.getCartItems().size());
+        BigDecimal total0 = BigDecimal.ZERO;
+        for (CartItem cartItem : cart.getCartItems()) {
+            BigDecimal price = cartItem.getProduct().getSpecialPrice();
+            BigDecimal qty = BigDecimal.valueOf(cartItem.getQuantity());
+            BigDecimal itemTotal = price.multiply(qty);
+            log.info("Calculating: {} × {} = {}", price, qty, itemTotal);
+            total0 = total0.add(itemTotal);
+        }
+        log.info("💵 Total using loop: {}", total0);
+
+        BigDecimal total = cart.getCartItems().stream()
                 .peek(cartItem -> {
-                    BigDecimal price = BigDecimal.valueOf(cartItem.getProduct().getSpecialPrice());
+                    BigDecimal price = cartItem.getProduct().getSpecialPrice();
                     BigDecimal quantity = BigDecimal.valueOf(cartItem.getQuantity());
                     log.info("🧾 Product ID: {}, Qty: {}, Price: {}, Total: {}",
                             cartItem.getProduct().getId(),
@@ -331,11 +352,13 @@ public class CartServiceImpl implements CartService {
                             price,
                             price.multiply(quantity));  // log the price * qty calculation
                 })
-                .mapToDouble(cartItem ->
-                        cartItem.getQuantity() * cartItem.getProduct().getSpecialPrice())
-                .sum();
+                .map(cartItem -> cartItem.getProduct().getSpecialPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+//                .mapToDouble(cartItem ->
+//                        cartItem.getQuantity() * cartItem.getProduct().getSpecialPrice())
+//                .sum();
 
-        log.debug("💵 Calculated total cart price: [{}]", total);
+        log.info("💵 Calculated total cart price: [{}]", total);
         return total;
     }
 
@@ -358,7 +381,7 @@ public class CartServiceImpl implements CartService {
                     newCartItem.setAddedAt(LocalDateTime.now());
                     newCartItem.setInventoryLocked(true);
                     newCartItem.setLockedAt(LocalDateTime.now());
-                    return newCartItem;
+                    return cartItemRepository.save(newCartItem);
                 });
     }
 

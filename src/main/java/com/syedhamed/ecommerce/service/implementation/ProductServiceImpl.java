@@ -22,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,9 +61,15 @@ public class ProductServiceImpl implements ProductService {
 
         product.setProductImage(DEFAULT_PRODUCT_IMAGE);
 
-        if (product.getDiscount() != null && product.getDiscount() > 0) {
-            double specialPrice = product.getPrice() -
-                    ((product.getDiscount() * 0.01) * product.getPrice());
+        if (product.getDiscount() != null && product.getDiscount().compareTo(BigDecimal.ZERO) > 0) {
+//            double specialPrice = product.getPrice() -
+//                    ((product.getDiscount() * 0.01) * product.getPrice());
+            BigDecimal specialPrice = product.getPrice()
+                            .subtract(
+                                    product.getDiscount()
+                                            .multiply(BigDecimal.valueOf(0.01))
+                                            .multiply(product.getPrice())
+                            );
             product.setSpecialPrice(specialPrice);
 
         }
@@ -117,16 +124,23 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
         log.info("Product found by id: [{}]", productId);
         log.info("Current product's special price: [{}]", product.getSpecialPrice());
-        double updatedSpecialPrice = product.getSpecialPrice();
+        BigDecimal updatedSpecialPrice = product.getSpecialPrice();
         // Map the fields from ProductDTO to Product entity
         // Only non-null fields in productDTO will overwrite the corresponding fields in product
         modelMapper.map(productDTO, product);
         // Recalculate the special price if discount is available
         log.info("Recalculating special price...");
         log.info("Current special price: [{}]", updatedSpecialPrice);
-        if (product.getDiscount() != null && product.getDiscount() > 0) {
-            updatedSpecialPrice = product.getPrice() - ((product.getDiscount() * 0.01) * product.getPrice());
+        if (product.getDiscount() != null && product.getDiscount().compareTo(BigDecimal.ZERO) > 0) {
+//            updatedSpecialPrice = product.getPrice() - ((product.getDiscount() * 0.01) * product.getPrice());
+            updatedSpecialPrice = product.getPrice()
+                            .subtract(
+                                    product.getDiscount()
+                                            .multiply(BigDecimal.valueOf(0.01))
+                                            .multiply(product.getPrice())
+                            );
             product.setSpecialPrice(updatedSpecialPrice);
+
         }
         log.info("Updated special price: [{}]", product.getSpecialPrice());
 
