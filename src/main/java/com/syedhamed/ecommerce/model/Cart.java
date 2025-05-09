@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,9 +18,9 @@ public class Cart {
     @GeneratedValue
     private Long id;
     // total special prices of all products as per quantity in the cart
-    private Double totalSpecialPrice;
+    private BigDecimal totalSpecialPrice;
     // total amount saved ( total price - total actual prices of all products as per quantity in the cart )
-    private Double totalSavedPrice;
+    private BigDecimal totalSavedPrice;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<CartItem> cartItems = new ArrayList<>();

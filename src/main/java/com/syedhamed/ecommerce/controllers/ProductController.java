@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,7 +30,12 @@ public class ProductController {
     @PostMapping("/categories/{categoryId}/product")
     public ResponseEntity<ProductDTO> addProduct(@PathVariable Long categoryId,
                                                  @RequestBody @Valid  ProductDTO productDTO) {
-        ProductDTO response = productService.addProduct(categoryId, productDTO);
+        ProductDTO response = null;
+        try {
+            response = productService.addProduct(categoryId, productDTO);
+        } catch (AccessDeniedException e) {
+           return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
+        }
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 

@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -23,9 +25,9 @@ public class Product { //owning side as per Category entity association
     private String description;
     private String productImage;
     private Integer quantity;
-    private Double price; //120$
-    private Double discount; //25%
-    private Double specialPrice; //90 [120-(25/100)*120]
+    private BigDecimal price; //120$
+    private BigDecimal discount; //25%
+    private BigDecimal specialPrice; //90 [120-(25/100)*120]
     @ManyToOne
     @JoinColumn(name = "category_id")
     @ToString.Exclude
@@ -42,6 +44,6 @@ public class Product { //owning side as per Category entity association
     @ToString.Exclude
     @JsonIgnore
     @OneToMany(mappedBy = "product", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    private List<CartItem> cartItems;
+    private List<CartItem> cartItems= new ArrayList<>();
 
 }
