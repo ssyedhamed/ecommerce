@@ -8,6 +8,7 @@ import com.syedhamed.ecommerce.payload.OrderItemDTO;
 import com.syedhamed.ecommerce.payload.ProductSnapshot;
 import com.syedhamed.ecommerce.repository.CartRepository;
 import com.syedhamed.ecommerce.repository.OrderRepository;
+import com.syedhamed.ecommerce.repository.ProductRepository;
 import com.syedhamed.ecommerce.repository.ProductSnapshotRepository;
 import com.syedhamed.ecommerce.service.contract.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ import java.util.Set;
 public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final CartRepository cartRepository;
+    private final ProductRepository productRepository;
     private final ModelMapper modelMapper;
     private final ProductSnapshotRepository productSnapshotRepository;
 
@@ -51,10 +53,14 @@ public class OrderServiceImpl implements OrderService {
             log.info("Product snapshot : [{}]", snapshot);
             OrderItem orderItem = new OrderItem();
             orderItem.setProductSnapshot(productSnapshot);
-            orderItem.setQuantity(cartItem.getQuantity());
             orderItem.setPriceAtPurchase(cartItem.getProduct().getSpecialPrice());
+            orderItem.setQuantity(cartItem.getQuantity());
             log.info("product snapshot [{}] for cart item [{}]", productSnapshot, cartItem);
             orderItems.add(orderItem);
+            //after setting the quantity , we need to subtract the quantity from the product entity
+            Integer updatedStock = product.getQuantity() - cartItem.getQuantity();
+            product.setQuantity(updatedStock);
+            productRepository.save(product);
         }
         Order order = new Order();
         order.setOrderItems(orderItems);
