@@ -95,14 +95,17 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional
     public CartItemDTO addProductToCart(Long productId, Integer requestedQuantity, String note) {
-
-
+        int existingQty;
+        int totalRequested;
+        Integer availableStock;
         log.info("▶ Attempting to add product [{}] with quantity [{}] to cart", productId, requestedQuantity);
 
         Product product = getProduct(productId);
-        if (product.getQuantity() == 0) {
-            log.warn("⚠ Product [{}] is out of stock", product.getProductName());
-            throw new APIException(product.getProductName() + " is not available");
+        availableStock = getAvailableStock(product);
+        log.info("📦 Available stock for product [{}]: [{}]", product.getId(), availableStock);
+        if (availableStock == 0) {
+            log.warn("⚠ Not enough stock to add more units of [{}]", product.getProductName());
+            throw new APIException("⚠ Not enough stock to add more units ");
         }
         if (requestedQuantity > product.getQuantity()) {
             log.debug("🔍 Requested [{}] > Total Stock [{}]", requestedQuantity, product.getQuantity());
@@ -119,24 +122,40 @@ public class CartServiceImpl implements CartService {
 
         cartItem.setLastUpdatedAt(LocalDateTime.now());
         cartItem.setNote(note);
-        int existingQty = cartItem.getQuantity();
-        int totalRequested = existingQty + requestedQuantity;
-        log.info("🔄 Existing quantity: [{}], Total after request: [{}]", existingQty, totalRequested);
-        Integer availableStock = getAvailableStock(product);
-        log.info("📦 Available stock for product [{}]: [{}]", product.getId(), availableStock);
-        if (totalRequested > availableStock) {
-            int canBeAdded = availableStock - existingQty;
-            if (canBeAdded <= 0) {
-                log.warn("⚠ Not enough stock to add more units of [{}]", product.getProductName());
-                throw new APIException("Only " + canBeAdded + " unit(s) are available right now.");
-            }
 
-            cartItem.setQuantity(existingQty + canBeAdded);
-            log.info("✅ Partial add: added [{}] units out of [{}]", canBeAdded, requestedQuantity);
+        existingQty = cartItem.getQuantity();
+        totalRequested = existingQty + requestedQuantity;
+        log.info("🔄 Existing quantity: [{}], Total requested: [{}]", existingQty, totalRequested);
+
+
+        int calculatedQuantity;
+
+        if (existingQty > 0 && totalRequested > availableStock) {
+            // Case: trying to add more than total stock (again)
+            log.info("again adding the quantity more than the stock...");
+            int actualAvailableStockForTheSameCartItem = existingQty + availableStock;
+            int additionalRequestedQuantity = Math.abs(actualAvailableStockForTheSameCartItem - totalRequested);
+            //can't add additional request
+            log.info("additionalRequestedQuantity : [{}] ", additionalRequestedQuantity);
+            // adding the available stock
+            calculatedQuantity = actualAvailableStockForTheSameCartItem;
+            log.info("✅ Reusing existing quantity + available stock (non locked quantity).... calculated quantity = [{}]", calculatedQuantity);
+            log.info("✅ Partial add: added [{}] units out of [{}]", availableStock, requestedQuantity);
+        } else if (totalRequested > availableStock) {
+            // Case: trying to add more than total stock (first time)
+            log.info("available stock : [{}]", availableStock);
+//            log.info("existing quantity : [{}]", existingQty);
+//            int canBeAdded = availableStock;
+            log.info("First time adding the quantity more than the stock...");
+            log.info("stock that can be added : [{}]", availableStock);
+            calculatedQuantity = availableStock;
+            log.info("calculated quantity is [{}]", calculatedQuantity);
+            log.info("✅ Partial add: added [{}] units out of [{}]", availableStock, requestedQuantity);
         } else {
-            cartItem.setQuantity(totalRequested);
-            log.info("✅ Full quantity added to cart: [{}]", totalRequested);
+            calculatedQuantity = totalRequested;
+            log.info("✅ Full quantity added to cart: [{}]", calculatedQuantity);
         }
+        cartItem.setQuantity(calculatedQuantity);
         cartItem.setAvailable(true);
 // Add the current CartItem to the in-memory Cart before calculating total price.
 // Even though the item is saved to the DB, cart.getCartItems() may not reflect it yet,
@@ -148,12 +167,11 @@ public class CartServiceImpl implements CartService {
                 .findFirst();
 
         if (existingItem.isPresent()) {
-            existingItem.get().setQuantity(totalRequested); // just update
+            existingItem.get().setQuantity(calculatedQuantity); // just update
         } else {
             cart.getCartItems().add(cartItem); // only add if it didn't exist
         }
 
-        log.info("cart size before total price calculation: [{}]", cart.getCartItems().size());
         BigDecimal totalCartPrice = getTotalPriceOfAllCartItemsInTheCart(cart);
         log.info("💰 Updated cart total price: [{}]", totalCartPrice);
         cart.setTotalSpecialPrice(totalCartPrice);
@@ -200,7 +218,7 @@ public class CartServiceImpl implements CartService {
         BigDecimal totalActualPrice = BigDecimal.valueOf(0);
         for (CartItem item : cart.getCartItems()) {
             log.info("Total Actual Price in loop: [{}]", totalActualPrice); //0,200
-            BigDecimal totalActualPriceAsPerQuantityOfCurrentItem =  item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+            BigDecimal totalActualPriceAsPerQuantityOfCurrentItem = item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
             log.info("totalActualPriceAsPerQuantityOfCurrentItem in loop: [{}]", totalActualPriceAsPerQuantityOfCurrentItem);
             //10*20 = 200
             // 2 * 600 = 1200
@@ -331,13 +349,12 @@ public class CartServiceImpl implements CartService {
         if (cart.getCartItems() == null) {
             return BigDecimal.valueOf(0);
         }
-        log.info("cart size : [{}]", cart.getCartItems().size());
         BigDecimal total0 = BigDecimal.ZERO;
         for (CartItem cartItem : cart.getCartItems()) {
             BigDecimal price = cartItem.getProduct().getSpecialPrice();
             BigDecimal qty = BigDecimal.valueOf(cartItem.getQuantity());
             BigDecimal itemTotal = price.multiply(qty);
-            log.info("Calculating: {} × {} = {}", price, qty, itemTotal);
+            log.info("Calculating price : {} × {} = {}", price, qty, itemTotal);
             total0 = total0.add(itemTotal);
         }
         log.info("💵 Total using loop: {}", total0);
@@ -417,7 +434,7 @@ public class CartServiceImpl implements CartService {
      */
     public Integer getAvailableStock(Product product) {
         Integer lockedQty = cartItemRepository.getLockedQuantityInAllCarts(product.getId());
-        log.info("🔐 Locked quantity of product [{}] in other carts: [{}]", product.getId(), lockedQty);
+        log.info("🔐 Locked quantity of product [{}] in all Cart's items: [{}]", product.getId(), lockedQty);
         return Math.max(product.getQuantity() - lockedQty, 0);
 
     }
