@@ -42,8 +42,8 @@ $ → End of the string.
 
 Ensures the entire string is checked, not just part of it.
      */
-    @Min(value = 0, message = "Quantity should be zero or greater")
-    private Integer quantity;
+    @Min(value = 0, message = "Product stock should be zero or greater")
+    private Integer stock;
     @PositiveOrZero(message = "Price should be zero or greater")
     private Double price;
     @Min(value = 0, message = "Discount must be between 0% and 100%")

@@ -107,8 +107,8 @@ public class CartServiceImpl implements CartService {
             log.warn("⚠ Not enough stock to add more units of [{}]", product.getProductName());
             throw new APIException("⚠ Not enough stock to add more units ");
         }
-        if (requestedQuantity > product.getQuantity()) {
-            log.debug("🔍 Requested [{}] > Total Stock [{}]", requestedQuantity, product.getQuantity());
+        if (requestedQuantity > product.getStock()) {
+            log.debug("🔍 Requested [{}] > Total Stock [{}]", requestedQuantity, product.getStock());
         }
 
         User user = authUtil.getAuthenticatedUserFromCurrentContext();
@@ -435,7 +435,7 @@ public class CartServiceImpl implements CartService {
     public Integer getAvailableStock(Product product) {
         Integer lockedQty = cartItemRepository.getLockedQuantityInAllCarts(product.getId());
         log.info("🔐 Locked quantity of product [{}] in all Cart's items: [{}]", product.getId(), lockedQty);
-        return Math.max(product.getQuantity() - lockedQty, 0);
+        return Math.max(product.getStock() - lockedQty, 0);
 
     }
 }

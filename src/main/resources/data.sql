@@ -31,7 +31,7 @@ INSERT INTO categories (category_id, category_name) VALUES (30, 'Educational Toy
 
 
 
-INSERT INTO products (product_name, description, quantity, price, discount, special_price, product_image, category_id) VALUES
+INSERT INTO products (product_name, description, stock, price, discount, special_price, product_image, category_id) VALUES
 ('Classic Cotton Tee', 'Soft cotton t-shirt for everyday wear', 100, 20.00, 10.00, 18.00, 'default.png', 1),
 ('V-Neck Sports Tee', 'Lightweight and breathable v-neck t-shirt', 80, 25.00, 15.00, 21.25, 'default.png', 1),
 ('Graphic Print Tee', 'Trendy t-shirt with unique graphic print', 120, 30.00, 20.00, 24.00, 'default.png', 1),

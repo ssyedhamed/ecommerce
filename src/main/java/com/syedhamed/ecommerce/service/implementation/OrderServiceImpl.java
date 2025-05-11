@@ -21,7 +21,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Service
 @Slf4j
@@ -58,8 +57,8 @@ public class OrderServiceImpl implements OrderService {
             log.info("product snapshot [{}] for cart item [{}]", productSnapshot, cartItem);
             orderItems.add(orderItem);
             //after setting the quantity , we need to subtract the quantity from the product entity
-            Integer updatedStock = product.getQuantity() - cartItem.getQuantity();
-            product.setQuantity(updatedStock);
+            Integer updatedStock = product.getStock() - cartItem.getQuantity();
+            product.setStock(updatedStock);
             productRepository.save(product);
         }
         Order order = new Order();

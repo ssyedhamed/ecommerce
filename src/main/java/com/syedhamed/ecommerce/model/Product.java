@@ -24,7 +24,7 @@ public class Product { //owning side as per Category entity association
     private String productName;
     private String description;
     private String productImage;
-    private Integer quantity;
+    private Integer stock;
     private BigDecimal price; //120$
     private BigDecimal discount; //25%
     private BigDecimal specialPrice; //90 [120-(25/100)*120]
