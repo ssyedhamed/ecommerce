@@ -24,6 +24,7 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems;
     private LocalDateTime orderDate;
+    @Enumerated(EnumType.STRING)
     private OrderStatus orderStatus;
     private BigDecimal totalPrice;
     @OneToOne(mappedBy = "order")
