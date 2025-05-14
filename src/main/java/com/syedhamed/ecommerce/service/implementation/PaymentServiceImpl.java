@@ -4,30 +4,26 @@ import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.syedhamed.ecommerce.exceptions.APIException;
 import com.syedhamed.ecommerce.exceptions.ResourceNotFoundException;
-import com.syedhamed.ecommerce.model.CartItem;
 import com.syedhamed.ecommerce.model.Order;
-import com.syedhamed.ecommerce.model.OrderItem;
 import com.syedhamed.ecommerce.model.Payment;
 import com.syedhamed.ecommerce.payload.external.PaymentResponse;
-import com.syedhamed.ecommerce.payload.external.paymentOrderResponse;
 import com.syedhamed.ecommerce.repository.PaymentRepository;
 import com.syedhamed.ecommerce.service.contract.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.security.crypto.codec.Hex;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.math.RoundingMode;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -36,11 +32,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class PaymentServiceImpl implements PaymentService {
-    private final RestTemplate restTemplate;
     private final PaymentRepository paymentRepository;
-
-    //    @Value("${pg.create-order.URL}")
-    private String RAZORPAY_API_URL = "https://api.razorpay.com/v1/orders";
     @Value("${pg.key.id}")
     private String razorPayKey;
     @Value("${pg.key.secret}")
@@ -48,7 +40,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public Payment createPaymentOrder(Order order) {
-        RazorpayClient razorpayClient = null;
+        RazorpayClient razorpayClient;
         try {
             razorpayClient = new RazorpayClient(razorPayKey, razorPaySecret, true);
         } catch (RazorpayException e) {
@@ -66,8 +58,7 @@ public class PaymentServiceImpl implements PaymentService {
 //            notes.put("notes_key_1", "Tea, Earl Grey, Hot");
 //        }
 //        orderRequest.put("notes", notes);
-
-        com.razorpay.Order razorOrder = null;
+        com.razorpay.Order razorOrder;
         try {
             razorOrder = razorpayClient.orders.create(orderRequest);
         } catch (RazorpayException e) {
@@ -81,13 +72,12 @@ public class PaymentServiceImpl implements PaymentService {
         Date createdAt = razorOrder.get("created_at");
         LocalDateTime createdAt1 = createdAt.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
         payment.setCreatedAt(createdAt1);
-        Number amountNumber  = razorOrder.get("amount");
+        Number amountNumber = razorOrder.get("amount");
         // need to divide by 100 since razorpay response includes amount in paise not Rupees
-        BigDecimal amount = BigDecimal.valueOf(amountNumber.longValue()).divide(BigDecimal.valueOf(100));
+        BigDecimal amount = BigDecimal.valueOf(amountNumber.longValue()).divide(BigDecimal.valueOf(100), RoundingMode.HALF_UP);
         payment.setAmount(amount);
 //        payment.setReceipt(razorOrder.get("receipt"));
-        Payment savedPayment = paymentRepository.save(payment);
-        return savedPayment;
+        return paymentRepository.save(payment);
     }
 //   Orders entity example
 //    {
@@ -110,31 +100,38 @@ public class PaymentServiceImpl implements PaymentService {
 
 
     @Override
-    public boolean verifyPayment(PaymentResponse paymentResponse) {
-        log.info("verifying payment...");
+    public void verifyPayment(PaymentResponse paymentResponse) {
         Payment payment = paymentRepository
                 .findByPaymentOrderId(paymentResponse.getRazorpayOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("payment", "orderId", paymentResponse.getRazorpayOrderId()));
-        log.info("payment details fetched from DB : [{}]", payment.getPaymentOrderId());
-        try {
-            String payload = payment.getPaymentOrderId() + "|" + paymentResponse.getRazorpayPaymentId();
-            log.info("payload generated: {}", payload);
-            String expected = hmacSHA256(payload, razorPaySecret);
-            log.info("expected signature: {}", expected);
-            log.info("original signature: {}",paymentResponse.getRazorpaySignature());
-            payment.setPaymentId(paymentResponse.getRazorpayPaymentId());
-            payment.setSignature(paymentResponse.getRazorpaySignature());
-            paymentRepository.save(payment);
-            return expected.equals(paymentResponse.getRazorpaySignature());
-        } catch (Exception e) {
-            return false;
+        if (!verifySignature(payment, paymentResponse)) {
+            throw new APIException("Invalid payment signature");
         }
+        payment.setPaymentId(paymentResponse.getRazorpayPaymentId());
+        payment.setSignature(paymentResponse.getRazorpaySignature());
+        paymentRepository.save(payment);
     }
 
-    private String hmacSHA256(String data, String key) throws Exception {
-        Mac mac = Mac.getInstance("HmacSHA256");
+    private boolean verifySignature(Payment payment, PaymentResponse paymentResponse) {
+        String payload = payment.getPaymentOrderId() + "|" + paymentResponse.getRazorpayPaymentId();
+        String expected = hmacSHA256(payload, razorPaySecret);
+       return expected.equals(paymentResponse.getRazorpaySignature());
+    }
+
+
+    private String hmacSHA256(String data, String key) {
+        Mac mac;
+        try {
+            mac = Mac.getInstance("HmacSHA256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
         SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(), "HmacSHA256");
-        mac.init(secretKey);
+        try {
+            mac.init(secretKey);
+        } catch (InvalidKeyException e) {
+            throw new RuntimeException(e);
+        }
         byte[] hash = mac.doFinal(data.getBytes());
         return new String(Hex.encode(hash));
     }
