@@ -26,4 +26,6 @@ public class Order {
     private LocalDateTime orderDate;
     private OrderStatus orderStatus;
     private BigDecimal totalPrice;
+    @OneToOne(mappedBy = "order")
+    private Payment payment;
 }

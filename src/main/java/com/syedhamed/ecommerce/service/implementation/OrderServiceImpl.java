@@ -11,6 +11,7 @@ import com.syedhamed.ecommerce.repository.OrderRepository;
 import com.syedhamed.ecommerce.repository.ProductRepository;
 import com.syedhamed.ecommerce.repository.ProductSnapshotRepository;
 import com.syedhamed.ecommerce.service.contract.OrderService;
+import com.syedhamed.ecommerce.service.contract.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -31,7 +32,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final ModelMapper modelMapper;
     private final ProductSnapshotRepository productSnapshotRepository;
-
+    private final PaymentService paymentService;
     @Override
     @Transactional
     public OrderDTO createOrder(User user) {
@@ -62,6 +63,7 @@ public class OrderServiceImpl implements OrderService {
             productRepository.save(product);
         }
         Order order = new Order();
+        order.setUser(user);
         order.setOrderItems(orderItems);
         order.setOrderStatus(OrderStatus.PENDING);
         order.setOrderDate(LocalDateTime.now());
@@ -69,6 +71,8 @@ public class OrderServiceImpl implements OrderService {
                         orderItem.getPriceAtPurchase().multiply(BigDecimal.valueOf(orderItem.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         order.setTotalPrice(totalPrice);
+        Payment paymentOrder = paymentService.createPaymentOrder(order);
+        log.info("Payment has been created. Saving order...");
         Order savedOrder = orderRepository.save(order);
         log.info("Order saved to the DB. Deleting cart items...");
         cart.getCartItems().clear();
@@ -82,7 +86,7 @@ public class OrderServiceImpl implements OrderService {
         orderDTO.setOrderDate(savedOrder.getOrderDate());
         orderDTO.setOrderStatus(savedOrder.getOrderStatus().name());
         orderDTO.setTotalPrice(savedOrder.getTotalPrice());
-
+        orderDTO.setPaymentOrderId(paymentOrder.getPaymentOrderId());
         List<OrderItemDTO> itemDTOs = savedOrder.getOrderItems().stream().map(item -> {
             OrderItemDTO dto = new OrderItemDTO();
             dto.setProductName(item.getProductSnapshot().getProductName());

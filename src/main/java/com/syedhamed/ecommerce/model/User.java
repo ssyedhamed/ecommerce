@@ -1,5 +1,6 @@
 package com.syedhamed.ecommerce.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.syedhamed.ecommerce.enums.SellerApplicationStatus;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
@@ -71,9 +72,9 @@ public class User  {
     private boolean deactivated;
     private LocalDateTime deactivatedAt;
 
-//    @ToString.Exclude
-//    @JsonIgnore
-    @JsonManagedReference
+//    @JsonManagedReference
+    @ToString.Exclude
+    @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Address> addresses = new ArrayList<>();
 
@@ -88,7 +89,7 @@ public class User  {
     @OneToMany(mappedBy = "seller", cascade = {CascadeType.MERGE, CascadeType.PERSIST}, orphanRemoval = true)
     private Set<Product> products;
 
-
+    @ToString.Exclude
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Cart cart;
 
