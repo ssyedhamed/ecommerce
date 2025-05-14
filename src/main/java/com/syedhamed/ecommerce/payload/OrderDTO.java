@@ -1,7 +1,5 @@
 package com.syedhamed.ecommerce.payload;
 
-import com.syedhamed.ecommerce.enums.OrderStatus;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,4 +16,5 @@ public class OrderDTO {
     private LocalDateTime orderDate;
     private String orderStatus;
     private BigDecimal totalPrice;
+    private String paymentOrderId;
 }

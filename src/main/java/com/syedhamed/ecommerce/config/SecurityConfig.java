@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -46,9 +47,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login", "api/users/register",
                                 "api/products", "api/categories/{categoryId}/products",
                                 "api/products/search").permitAll()
-
 //                        .requestMatchers("/api/users/**", "/api/users").permitAll()
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers("/api/payment/verify").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated());
         //make api stateless
         http.sessionManagement(
@@ -108,21 +110,6 @@ public class SecurityConfig {
         provider.setUserDetailsService(customUserDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
-    }
-
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @SuppressWarnings("NullableProblems")
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:3000") // frontend origin
-                        .allowedMethods("*")
-                        .allowedHeaders("*")
-                        .allowCredentials(true); // ⭐️ This is the key
-            }
-        };
     }
 
 
