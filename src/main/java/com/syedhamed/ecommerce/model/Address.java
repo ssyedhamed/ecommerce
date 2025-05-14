@@ -1,5 +1,6 @@
 package com.syedhamed.ecommerce.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.syedhamed.ecommerce.enums.AddressType;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
@@ -30,8 +31,8 @@ public class Address {
     private LocalDateTime createdAt;
     private int usageCount;
 
-//    @JsonIgnore
-    @JsonBackReference
+//    @JsonBackReference
+    @JsonIgnore
     @ToString.Exclude
     @ManyToOne
     @JoinColumn(name = "user_id")
